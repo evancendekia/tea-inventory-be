@@ -1,0 +1,172 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String // master_admin, owner, inventory_officer
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Branch {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shiftReports ShiftReport[]
+}
+
+model BoothEmployee {
+  id        Int      @id @default(autoincrement())
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  shiftReports ShiftReport[]
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  menus Menu[]
+}
+
+model InventoryItem {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  purchasePrice Decimal  @db.Decimal(10, 2)
+  stock         Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  movements        InventoryMovement[]
+  menus            Menu[]
+  shiftReportItems ShiftReportInventory[]
+}
+
+model InventoryMovement {
+  id              Int      @id @default(autoincrement())
+  inventoryItemId Int
+  type            String
+  quantity        Int
+  referenceId     Int?
+  note            String?
+  createdAt       DateTime @default(now())
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+}
+
+model Menu {
+  id              Int      @id @default(autoincrement())
+  name            String
+  isActive        Boolean  @default(true)
+  categoryId      Int
+  inventoryItemId Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  category      Category      @relation(fields: [categoryId], references: [id])
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  prices        MenuPrice[]
+
+  shiftReportItems ShiftReportMenu[]
+
+  @@unique([name, categoryId])
+}
+
+model MenuPrice {
+  id        Int       @id @default(autoincrement())
+  menuId    Int
+  price     Decimal   @db.Decimal(10, 2)
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+
+  menu Menu @relation(fields: [menuId], references: [id])
+}
+
+model ShiftReport {
+  id          Int      @id @default(autoincrement())
+  date        DateTime
+  shiftNumber Int
+
+  branchId        Int
+  boothEmployeeId Int
+
+  initialCash  Decimal @db.Decimal(12, 2)
+  totalRevenue Decimal @db.Decimal(12, 2)
+  totalExpense Decimal @db.Decimal(12, 2)
+  expectedCash Decimal @db.Decimal(12, 2)
+  actualCash   Decimal @db.Decimal(12, 2)
+  variance     Decimal @db.Decimal(12, 2)
+
+  status    String   @default("SUBMITTED")
+  createdAt DateTime @default(now())
+
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  boothEmployee BoothEmployee @relation(fields: [boothEmployeeId], references: [id])
+
+  menuItems      ShiftReportMenu[]
+  inventoryItems ShiftReportInventory[]
+  expenses       ShiftReportExpense[]
+
+  @@unique([date, shiftNumber, branchId])
+}
+
+model ShiftReportMenu {
+  id            Int @id @default(autoincrement())
+  shiftReportId Int
+  menuId        Int
+
+  initialAmount Int
+  finalAmount   Int
+  soldQuantity  Int
+  priceSnapshot Decimal @db.Decimal(10, 2)
+  subtotal      Decimal @db.Decimal(12, 2)
+
+  shiftReport ShiftReport @relation(fields: [shiftReportId], references: [id])
+  menu        Menu        @relation(fields: [menuId], references: [id])
+}
+
+model ShiftReportInventory {
+  id              Int @id @default(autoincrement())
+  shiftReportId   Int
+  inventoryItemId Int
+
+  initialAmount Int
+  finalAmount   Int
+
+  shiftReport   ShiftReport   @relation(fields: [shiftReportId], references: [id])
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+}
+
+model ShiftReportExpense {
+  id            Int     @id @default(autoincrement())
+  shiftReportId Int
+  description   String
+  amount        Decimal @db.Decimal(12, 2)
+
+  shiftReport ShiftReport @relation(fields: [shiftReportId], references: [id])
+}
