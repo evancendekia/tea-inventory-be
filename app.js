@@ -14,7 +14,7 @@ app.use('/api/categories', require('./src/modules/category/category.routes'))
 app.use('/api/menus', require('./src/modules/menu/menu.routes'))
 app.use('/api/inventory', require('./src/modules/inventory/inventory.routes'))
 app.use('/api/branches', require('./src/modules/branch/branch.routes'))
-app.use('/api/reports', require('./src/modules/Report/report.routes'))
+app.use('/api/reports', require('./src/modules/report/report.routes'))
 
 
 app.use(errorHandler)
